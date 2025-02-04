@@ -1,0 +1,32 @@
+project_name: mihomo
+
+version: 2
+
+builds:
+  - id: main
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -v
+      - -trimpath
+    ldflags:
+      - -X github.com/metacubex/mihomo/constant.Version={{.Version}}
+      - -s
+      - -w
+      - -buildid=
+    tags:
+      - with_gvisor
+    goos:
+      - linux
+    goarch:
+      - amd64
+    goamd64:
+      - v3
+      - v2
+      - v1
+    main: ./
+    binary: mihomo
+
+archives:
+  - name_template: "{{ .ProjectName }}-{{ .Os }}-{{ .Arch }}-{{ .Amd64 }}"
+    format: tar.gz

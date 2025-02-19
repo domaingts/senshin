@@ -165,6 +165,7 @@ func unzip(src, dest string) (string, error) {
 	// check whether or not only exists singleRoot dir
 	rootDir := ""
 	isSingleRoot := true
+	rootItemCount := 0
 	for _, f := range r.File {
 		parts := strings.Split(strings.Trim(f.Name, "/"), "/")
 		if len(parts) == 0 {
@@ -172,24 +173,32 @@ func unzip(src, dest string) (string, error) {
 		}
 
 		if len(parts) == 1 {
-			isSingleRoot = false
-			break
-		}
+			isDir := strings.HasSuffix(f.Name, "/")
+			if !isDir {
+				isSingleRoot = false
+				break
+			}
 
-		if rootDir == "" {
-			rootDir = parts[0]
-		} else if parts[0] != rootDir {
-			isSingleRoot = false
-			break
+			if rootDir == "" {
+				rootDir = parts[0]
+			}
+			rootItemCount++
 		}
+	}
+
+	if rootItemCount != 1 {
+		isSingleRoot = false
 	}
 
 	// build the dir of extraction
 	var extractedFolder string
 	if isSingleRoot && rootDir != "" {
 		// if the singleRoot, use it directly
+		log.Debugln("Match the singleRoot")
 		extractedFolder = filepath.Join(dest, rootDir)
+		log.Debugln("extractedFolder: %s", extractedFolder)
 	} else {
+		log.Debugln("Match the multiRoot")
 		// or put the files/dirs into new dir
 		baseName := filepath.Base(src)
 		baseName = strings.TrimSuffix(baseName, filepath.Ext(baseName))
@@ -201,6 +210,7 @@ func unzip(src, dest string) (string, error) {
 			}
 			extractedFolder = filepath.Join(dest, fmt.Sprintf("%s_%d", baseName, i))
 		}
+		log.Debugln("extractedFolder: %s", extractedFolder)
 	}
 
 	for _, f := range r.File {
@@ -256,6 +266,7 @@ func untgz(src, dest string) (string, error) {
 
 	rootDir := ""
 	isSingleRoot := true
+	rootItemCount := 0
 	for {
 		header, err := tr.Next()
 		if err == io.EOF {
@@ -265,22 +276,27 @@ func untgz(src, dest string) (string, error) {
 			return "", err
 		}
 
-		parts := strings.Split(strings.Trim(header.Name, "/"), "/")
+		parts := strings.Split(cleanTarPath(header.Name), string(os.PathSeparator))
 		if len(parts) == 0 {
 			continue
 		}
 
 		if len(parts) == 1 {
-			isSingleRoot = false
-			break
-		}
+			isDir := header.Typeflag == tar.TypeDir
+			if !isDir {
+				isSingleRoot = false
+				break
+			}
 
-		if rootDir == "" {
-			rootDir = parts[0]
-		} else if parts[0] != rootDir {
-			isSingleRoot = false
-			break
+			if rootDir == "" {
+				rootDir = parts[0]
+			}
+			rootItemCount++
 		}
+	}
+
+	if rootItemCount != 1 {
+		isSingleRoot = false
 	}
 
 	file.Seek(0, 0)
@@ -289,8 +305,11 @@ func untgz(src, dest string) (string, error) {
 
 	var extractedFolder string
 	if isSingleRoot && rootDir != "" {
+		log.Debugln("Match the singleRoot")
 		extractedFolder = filepath.Join(dest, rootDir)
+		log.Debugln("extractedFolder: %s", extractedFolder)
 	} else {
+		log.Debugln("Match the multiRoot")
 		baseName := filepath.Base(src)
 		baseName = strings.TrimSuffix(baseName, filepath.Ext(baseName))
 		baseName = strings.TrimSuffix(baseName, ".tar")
@@ -302,6 +321,7 @@ func untgz(src, dest string) (string, error) {
 			}
 			extractedFolder = filepath.Join(dest, fmt.Sprintf("%s_%d", baseName, i))
 		}
+		log.Debugln("extractedFolder: %s", extractedFolder)
 	}
 
 	for {
@@ -315,9 +335,9 @@ func untgz(src, dest string) (string, error) {
 
 		var fpath string
 		if isSingleRoot && rootDir != "" {
-			fpath = filepath.Join(dest, header.Name)
+			fpath = filepath.Join(dest, cleanTarPath(header.Name))
 		} else {
-			fpath = filepath.Join(extractedFolder, header.Name)
+			fpath = filepath.Join(extractedFolder, cleanTarPath(header.Name))
 		}
 
 		if !strings.HasPrefix(fpath, filepath.Clean(dest)+string(os.PathSeparator)) {
@@ -358,6 +378,23 @@ func extract(src, dest string) (string, error) {
 	default:
 		return "", fmt.Errorf("unsupported file format: %s", src)
 	}
+}
+
+func cleanTarPath(path string) string {
+	// remove prefix ./ or ../
+	path = strings.TrimPrefix(path, "./")
+	path = strings.TrimPrefix(path, "../")
+
+	// normalize path
+	path = filepath.Clean(path)
+
+	// transfer delimiters to system std
+	path = filepath.FromSlash(path)
+
+	// remove prefix path delimiters
+	path = strings.TrimPrefix(path, string(os.PathSeparator))
+
+	return path
 }
 
 func cleanup(root string) error {

@@ -29,13 +29,6 @@ func ParseProxy(mapping map[string]any) (C.Proxy, error) {
 			break
 		}
 		proxy, err = outbound.NewShadowSocks(*ssOption)
-	case "ssr":
-		ssrOption := &outbound.ShadowSocksROption{}
-		err = decoder.Decode(mapping, ssrOption)
-		if err != nil {
-			break
-		}
-		proxy, err = outbound.NewShadowSocksR(*ssrOption)
 	case "socks5":
 		socksOption := &outbound.Socks5Option{}
 		err = decoder.Decode(mapping, socksOption)
@@ -71,13 +64,6 @@ func ParseProxy(mapping map[string]any) (C.Proxy, error) {
 			break
 		}
 		proxy, err = outbound.NewVless(*vlessOption)
-	case "snell":
-		snellOption := &outbound.SnellOption{}
-		err = decoder.Decode(mapping, snellOption)
-		if err != nil {
-			break
-		}
-		proxy, err = outbound.NewSnell(*snellOption)
 	case "trojan":
 		trojanOption := &outbound.TrojanOption{ClientFingerprint: tlsC.GetGlobalFingerprint()}
 		err = decoder.Decode(mapping, trojanOption)
@@ -85,13 +71,6 @@ func ParseProxy(mapping map[string]any) (C.Proxy, error) {
 			break
 		}
 		proxy, err = outbound.NewTrojan(*trojanOption)
-	case "hysteria":
-		hyOption := &outbound.HysteriaOption{}
-		err = decoder.Decode(mapping, hyOption)
-		if err != nil {
-			break
-		}
-		proxy, err = outbound.NewHysteria(*hyOption)
 	case "hysteria2":
 		hyOption := &outbound.Hysteria2Option{}
 		err = decoder.Decode(mapping, hyOption)
@@ -106,13 +85,6 @@ func ParseProxy(mapping map[string]any) (C.Proxy, error) {
 			break
 		}
 		proxy, err = outbound.NewWireGuard(*wgOption)
-	case "tuic":
-		tuicOption := &outbound.TuicOption{}
-		err = decoder.Decode(mapping, tuicOption)
-		if err != nil {
-			break
-		}
-		proxy, err = outbound.NewTuic(*tuicOption)
 	case "direct":
 		directOption := &outbound.DirectOption{}
 		err = decoder.Decode(mapping, directOption)
@@ -141,13 +113,6 @@ func ParseProxy(mapping map[string]any) (C.Proxy, error) {
 			break
 		}
 		proxy, err = outbound.NewSsh(*sshOption)
-	case "mieru":
-		mieruOption := &outbound.MieruOption{}
-		err = decoder.Decode(mapping, mieruOption)
-		if err != nil {
-			break
-		}
-		proxy, err = outbound.NewMieru(*mieruOption)
 	default:
 		return nil, fmt.Errorf("unsupport proxy type: %s", proxyType)
 	}
